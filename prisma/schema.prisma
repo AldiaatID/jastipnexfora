@@ -1,0 +1,140 @@
+// Prisma schema for JastipFlow
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      String   @default("OWNER") // OWNER | ADMIN
+  store     Store?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Store {
+  id            String     @id @default(cuid())
+  name          String
+  username      String     @unique
+  description   String?
+  logoUrl       String?
+  whatsapp      String?
+  instagram     String?
+  tiktok        String?
+  bankInfo      String?
+  plan          String     @default("FREE") // FREE | BASIC | PRO
+  ownerId       String     @unique
+  owner         User       @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  products      Product[]
+  categories    Category[]
+  orders        Order[]
+  templates     Template[]
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+}
+
+model Category {
+  id        String    @id @default(cuid())
+  name      String
+  storeId   String
+  store     Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  products  Product[]
+  createdAt DateTime  @default(now())
+
+  @@unique([storeId, name])
+}
+
+model Product {
+  id            String      @id @default(cuid())
+  name          String
+  description   String?
+  imageUrl      String?
+  costPrice     Float       @default(0)
+  sellPrice     Float       @default(0)
+  stock         Int         @default(0)
+  isActive      Boolean     @default(true)
+  estimatedAt   DateTime?
+  storeId       String
+  store         Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  categoryId    String?
+  category      Category?   @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  orderItems    OrderItem[]
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  name      String
+  whatsapp  String
+  address   String?
+  storeId   String
+  orders    Order[]
+  createdAt DateTime @default(now())
+}
+
+model Order {
+  id              String      @id @default(cuid())
+  code            String      @unique
+  storeId         String
+  store           Store       @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  customerId      String?
+  customer        Customer?   @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  customerName    String
+  customerPhone   String
+  customerAddress String?
+  notes           String?
+  paymentMethod   String?     // TRANSFER | COD | EWALLET
+  paymentStatus   String      @default("UNPAID") // UNPAID | DP | PAID
+  status          String      @default("PENDING") // PENDING | PROCESSING | SHIPPED | DONE | CANCELLED
+  totalAmount     Float       @default(0)
+  totalCost       Float       @default(0)
+  items           OrderItem[]
+  payments        Payment[]
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+model OrderItem {
+  id         String   @id @default(cuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId  String?
+  product    Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  productName String
+  quantity   Int      @default(1)
+  unitPrice  Float    @default(0)
+  unitCost   Float    @default(0)
+  subtotal   Float    @default(0)
+}
+
+model Payment {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  amount    Float    @default(0)
+  method    String?
+  note      String?
+  paidAt    DateTime @default(now())
+}
+
+model Template {
+  id        String   @id @default(cuid())
+  storeId   String
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  key       String   // confirm | reminder | arrived | shipped | thanks
+  title     String
+  body      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([storeId, key])
+}
